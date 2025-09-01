@@ -99,69 +99,85 @@ const BlockBreakerGame: React.FC = () => {
     const SCALED_TABLE_TOP = TABLE_TOP * scale;
     const SCALED_TABLE_BOTTOM = TABLE_BOTTOM * scale;
 
-    canvas.width = canvasSize.width * window.devicePixelRatio;
-    canvas.height = canvasSize.height * window.devicePixelRatio;
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    // Scale canvas for high-DPI displays
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvasSize.width * dpr;
+    canvas.height = canvasSize.height * dpr;
+    ctx.scale(dpr, dpr);
 
-    // Background
+    // Beautiful gradient background
     const gradient = ctx.createLinearGradient(0, 0, 0, canvasSize.height);
     gradient.addColorStop(0, 'hsl(220, 13%, 8%)');
     gradient.addColorStop(1, 'hsl(220, 13%, 12%)');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
 
+    // Add star-like effects
+    ctx.fillStyle = 'hsl(193, 76%, 56%)';
+    for (let i = 0; i < 50; i++) {
+      const x = (i * 37) % canvasSize.width;
+      const y = (i * 41) % canvasSize.height;
+      ctx.fillRect(x, y, 1, 1);
+    }
+
+    // Scale the game content
+    ctx.save();
+    ctx.scale(scale, scale);
+
     // Boundaries
     ctx.strokeStyle = 'hsl(271, 81%, 56%)';
-    ctx.lineWidth = 5 * scale;
+    ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(0, SCALED_TABLE_TOP);
-    ctx.lineTo(canvasSize.width, SCALED_TABLE_TOP);
-    ctx.moveTo(0, SCALED_TABLE_BOTTOM);
-    ctx.lineTo(canvasSize.width, SCALED_TABLE_BOTTOM);
+    ctx.moveTo(0, TABLE_TOP);
+    ctx.lineTo(BASE_WIDTH, TABLE_TOP);
+    ctx.moveTo(0, TABLE_BOTTOM);
+    ctx.lineTo(BASE_WIDTH, TABLE_BOTTOM);
     ctx.stroke();
 
     // Paddle
     ctx.fillStyle = 'hsl(193, 76%, 56%)';
-    ctx.fillRect(playerPaddleXRef.current, SCALED_TABLE_BOTTOM - PADDLE_HEIGHT * scale, PADDLE_WIDTH * scale, PADDLE_HEIGHT * scale);
+    ctx.fillRect(playerPaddleXRef.current / scale, TABLE_BOTTOM - PADDLE_HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT);
 
     // Blocks
     ctx.fillStyle = 'hsl(271, 81%, 56%)';
     blocksRef.current.forEach(block => {
-      if (block.active) ctx.fillRect(block.x * scale, block.y * scale, BLOCK_WIDTH * scale, BLOCK_HEIGHT * scale);
+      if (block.active) ctx.fillRect(block.x, block.y, BLOCK_WIDTH, BLOCK_HEIGHT);
     });
 
     // Ball
     ctx.fillStyle = 'hsl(322, 81%, 56%)';
     ctx.beginPath();
-    ctx.arc(ballRef.current.x, ballRef.current.y, BALL_RADIUS * scale, 0, Math.PI * 2);
+    ctx.arc(ballRef.current.x / scale, ballRef.current.y / scale, BALL_RADIUS, 0, Math.PI * 2);
     ctx.fill();
 
     // HUD
     ctx.fillStyle = 'hsl(193, 76%, 56%)';
-    ctx.font = `bold ${20 * scale}px monospace`;
+    ctx.font = `bold ${20}px monospace`;
     ctx.textAlign = 'left';
-    ctx.fillText(`Level: ${levelRef.current}`, 10 * scale, SCALED_TABLE_TOP / 2);
+    ctx.fillText(`Level: ${levelRef.current}`, 10, TABLE_TOP / 2);
 
     ctx.fillStyle = 'hsl(322, 81%, 56%)';
-    ctx.font = `bold ${24 * scale}px monospace`;
+    ctx.font = `bold ${24}px monospace`;
     ctx.textAlign = 'center';
-    ctx.fillText(scoreRef.current.toString(), canvasSize.width / 2, SCALED_TABLE_TOP / 2);
+    ctx.fillText(scoreRef.current.toString(), BASE_WIDTH / 2, TABLE_TOP / 2);
 
     // Overlay for Game Over / Win
     if (['gameOver', 'win'].includes(gameStateRef.current)) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
+      ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
 
       ctx.fillStyle = 'hsl(271, 81%, 56%)';
-      ctx.font = `${32 * scale}px monospace`;
+      ctx.font = `${32}px monospace`;
       ctx.textAlign = 'center';
-      ctx.fillText(gameStateRef.current === 'win' ? 'YOU WIN!' : 'GAME OVER', canvasSize.width / 2, canvasSize.height / 2 - 40 * scale);
+      ctx.fillText(gameStateRef.current === 'win' ? 'YOU WIN!' : 'GAME OVER', BASE_WIDTH / 2, BASE_HEIGHT / 2 - 40);
 
       ctx.fillStyle = 'hsl(193, 76%, 56%)';
-      ctx.font = `${16 * scale}px monospace`;
-      ctx.fillText(`Score: ${scoreRef.current}`, canvasSize.width / 2, canvasSize.height / 2);
-      ctx.fillText(`Rating: ${rating}`, canvasSize.width / 2, canvasSize.height / 2 + 30 * scale);
+      ctx.font = `${16}px monospace`;
+      ctx.fillText(`Score: ${scoreRef.current}`, BASE_WIDTH / 2, BASE_HEIGHT / 2);
+      ctx.fillText(`Rating: ${rating}`, BASE_WIDTH / 2, BASE_HEIGHT / 2 + 30);
     }
+    
+    ctx.restore();
   }, [canvasSize, rating]);
 
   // --- Update game logic ---
@@ -317,7 +333,13 @@ const BlockBreakerGame: React.FC = () => {
       </div>
 
       <div className="relative border-2 border-border rounded-lg overflow-hidden neon-glow w-full">
-        <canvas ref={canvasRef} width={canvasSize.width} height={canvasSize.height} className="block cursor-pointer w-full" style={{ height: `${canvasSize.height}px` }} />
+        <canvas 
+          ref={canvasRef} 
+          width={canvasSize.width} 
+          height={canvasSize.height} 
+          className="block cursor-pointer w-full" 
+          style={{ height: `${canvasSize.height}px` }} 
+        />
       </div>
 
       <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full justify-center">
@@ -328,7 +350,7 @@ const BlockBreakerGame: React.FC = () => {
 
       <div className="text-center text-xs sm:text-sm text-muted-foreground w-full">
         <p>🎮 Use <b>Mouse / Touch</b> or <b>A / D / Arrow Keys</b> to move the paddle</p>
-        <p>Break all blocks to win. Don’t let the ball fall!</p>
+        <p>Break all blocks to win. Don't let the ball fall!</p>
       </div>
     </div>
   );
